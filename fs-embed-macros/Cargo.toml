@@ -9,7 +9,7 @@ description = "Procedural macros for the fs-embed library"
 readme = "README.md"
 homepage = "https://github.com/vivsh/fs-embed"
 documentation = "https://docs.rs/fs-embed"
-categories = ["development-tools::procedural-macro", "filesystem", "embedded"]
+categories = ["filesystem", "embedded"]
 keywords = ["embed", "filesystem", "macro", "include_dir", "assets"]
 exclude = ["tests/*", "examples/*"]
 
