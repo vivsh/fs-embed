@@ -1,0 +1,14 @@
+
+[package]
+name = "fs-embed"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+
+[dependencies]
+fs-embed-macros = { path = "../fs-embed-macros" }
+include_dir = {version = "0.7.4", features=[ "metadata" ]}
+tempfile = "3.20.0"
