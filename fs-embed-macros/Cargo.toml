@@ -1,11 +1,17 @@
+
 [package]
 name = "fs-embed-macros"
 version.workspace = true
 edition.workspace = true
-authors.workspace = true
-license.workspace = true
+license = "Apache-2.0 OR MIT"
 repository.workspace = true
 description = "Procedural macros for the fs-embed library"
+readme = "README.md"
+homepage = "https://github.com/vivsh/fs-embed"
+documentation = "https://docs.rs/fs-embed"
+categories = ["development-tools::procedural-macro", "filesystem", "embedded"]
+keywords = ["embed", "filesystem", "macro", "include_dir", "assets"]
+exclude = ["tests/*", "examples/*"]
 
 [lib]
 proc-macro = true
