@@ -15,6 +15,6 @@ keywords = ["embed", "filesystem", "assets", "include_dir", "static"]
 exclude = ["tests/*", "examples/*"]
 
 [dependencies]
-fs-embed-macros = { path = "../fs-embed-macros" }
+fs-embed-macros = "0.1"
 include_dir = {version = "0.7.4", features=[ "metadata" ]}
 tempfile = "3.20.0"
