@@ -1,3 +1,43 @@
+/// Checks that get_dir returns a subdirectory and its entries can be listed.
+#[test]
+fn test_get_dir() {
+    let dir = test_dir();
+    let subdir = dir.get_dir("subdir");
+    assert!(subdir.is_some());
+    let subdir = subdir.unwrap();
+    let entries = subdir.entries();
+    let names: Vec<_> = entries.iter().map(|e| e.path().file_name().unwrap().to_str().unwrap().to_string()).collect();
+    assert!(names.contains(&"gamma.txt".to_string()));
+    assert!(names.contains(&"delta.txt".to_string()));
+}
+
+/// Checks that get_dir returns None for a non-existent subdirectory.
+#[test]
+fn test_get_dir_not_found() {
+    let dir = test_dir();
+    assert!(dir.get_dir("not_a_dir").is_none());
+}
+
+/// Checks that DirSet::get_dir returns the highest-precedence subdirectory.
+#[test]
+fn test_dirset_get_dir_override() {
+    let set = DirSet::new(vec![test_dir(), test_override_dir()]);
+    let subdir = set.get_dir("subdir");
+    assert!(subdir.is_some());
+    let subdir = subdir.unwrap();
+    let entries = subdir.entries();
+    let names: Vec<_> = entries.iter().map(|e| e.path().file_name().unwrap().to_str().unwrap().to_string()).collect();
+    // Should contain gamma.txt and delta.txt from the base dir
+    assert!(names.contains(&"gamma.txt".to_string()));
+    assert!(names.contains(&"delta.txt".to_string()));
+}
+
+/// Checks that DirSet::get_dir returns None for a non-existent subdirectory.
+#[test]
+fn test_dirset_get_dir_not_found() {
+    let set = DirSet::new(vec![test_dir(), test_override_dir()]);
+    assert!(set.get_dir("not_a_dir").is_none());
+}
 
 use fs_embed::*;
 

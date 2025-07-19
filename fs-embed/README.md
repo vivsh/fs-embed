@@ -1,39 +1,37 @@
+
 # fs-embed
 
-Embed directories into your binary at compile time with **zero runtime config** — supporting both **embedded** and **live (dynamic)** modes through a single API.
+[![crates.io](https://img.shields.io/crates/v/fs-embed.svg)](https://crates.io/crates/fs-embed)
+[![docs.rs](https://docs.rs/fs-embed/badge.svg)](https://docs.rs/fs-embed)
+[![License: MIT OR Apache-2.0](https://img.shields.io/crates/l/fs-embed)](../LICENSE)
+
+Embed directories into your binary at compile time, or read from disk at runtime, with a unified and ergonomic API. Supports overlays, dynamic mode, and directory composition.
 
 ---
 
-## 📝 Philosophy
+## Features
 
-`fs-embed` is built for **frictionless file access across environments**:
-
-* ✅ **Always embedded**: `fs_embed!("dir")` embeds directories at compile time, even in debug builds.
-* 🔁 **Switch to live mode** (e.g. for hot-reloading): Call `.into_dynamic()` or `.auto_dynamic()` — no need to change your file access logic.
-* 🔗 **Overlay support**: Compose multiple embedded or dynamic directories using `DirSet`, with override precedence.
-* 📩 **One macro, one API**: No cargo features, no env vars, no conditional compilation.
-
-This enables:
-
-* **Reproducible builds**: Assets are fully embedded in release binaries.
-* **Fast iteration in development**: Read live files with a one-line change — no config, no rebuild.
-* **Clean architecture**: Keep templates, config, and assets in sync with source and override them per environment.
+- Embed directories or files at compile time using a single macro: `fs_embed!()`
+- Switch between embedded and disk-backed (dynamic) mode at runtime
+- Compose multiple directories with overlays using `DirSet`
+- Access files and subdirectories by path, list entries, and walk recursively
+- Overlay/override support: later directories take precedence
+- No build scripts, no config, no env vars
+- Robust error handling and path normalization
 
 ---
 
-## 🚀 Quick Start
+## Example Usage
 
 ```rust
 use fs_embed::fs_embed;
 
-// Embed the "static" folder — always at compile time, even in debug builds.
+// Embed the "static" folder
 static STATIC: fs_embed::Dir = fs_embed!("static");
 
 fn main() {
-    // Use disk in debug builds, embedded in release
+    // Use disk in debug, embedded in release
     let dir = STATIC.auto_dynamic();
-
-    // Load a file (relative to the embedded root or disk path)
     if let Some(file) = dir.get_file("css/style.css") {
         let content = file.read_str().unwrap();
         println!("{content}");
@@ -41,95 +39,95 @@ fn main() {
 }
 ```
 
-> 📌 `fs_embed!("static")` expects a **literal relative path** inside your crate, resolved via `CARGO_MANIFEST_DIR`.
-
 ---
 
-## 🔄 Embedded vs Dynamic
+## Macro Usage and Options
 
-Two methods let you switch modes at runtime:
-
-* **`.into_dynamic()`**
-
-  * Always reads from disk.
-  * Useful for tests, hot-reload, or CLI tools.
-
-  ```rust
-  let dir = fs_embed!("templates").into_dynamic();
-  ```
-
-* **`.auto_dynamic()`**
-
-  * Reads from disk in debug, embedded in release.
-  * Best for development–production parity.
-
-  ```rust
-  let dir = fs_embed!("templates").auto_dynamic();
-  ```
-
----
-
-## 📚 Core API
-
-| Method                             | Description                                               |
-| ---------------------------------- | --------------------------------------------------------- |
-| `Dir::get_file(path)`              | Get a file by relative path                               |
-| `Dir::read_str()` / `read_bytes()` | Read file contents                                        |
-| `Dir::walk()`                      | Recursively yield all files                               |
-| `Dir::walk_override()`             | Recursively yield highest-precedence files (for overlays) |                              |
-| `Dir::is_embedded()`               | Returns `true` if directory is embedded                   |
-| `Dir::into_dynamic()`              | Convert to dynamic (disk-backed) mode                     |
-| `Dir::auto_dynamic()`              | Use disk in debug, embedded in release                    |
-
----
-
-## 🥃 Override Behavior
-
-You can compose multiple directories using `DirSet`:
+The `fs_embed!` macro expects a literal relative path inside your crate, resolved via `CARGO_MANIFEST_DIR`.
 
 ```rust
-let dir = DirSet::new([
-    fs_embed!("base"),
-    fs_embed!("theme").auto_dynamic(),
-]);
-
-let file = dir.get_file("index.html"); // From theme if it exists, otherwise base
+static DIR: fs_embed::Dir = fs_embed!("assets");
 ```
 
-* Overlay precedence is left-to-right.
-* Only the **first match** for each path is returned.
-* `walk_override()` yields exactly one file per unique relative path.
+By default, in debug mode, files are read from disk for hot-reload; in release mode, files are embedded in the binary.
+
+Example with options:
+
+```rust
+static DIR: fs_embed::Dir = fs_embed!("assets");
+```
+
+
+## Directory API
+
+### Dir
+
+- `Dir::get_file(path)` — Get a file by relative path
+- `Dir::get_dir(path)` — Get a subdirectory by relative path
+- `Dir::entries()` — List all immediate entries (files and subdirectories)
+- `Dir::walk()` — Recursively yield all files
+- `Dir::is_embedded()` — Returns `true` if directory is embedded
+- `Dir::into_dynamic()` — Always use disk (dynamic) mode
+- `Dir::auto_dynamic()` — Use disk in debug, embedded in release
+
+### File
+
+- `File::file_name()` — Get the file name
+- `File::extension()` — Get the file extension
+- `File::read_bytes()` — Read file contents as bytes
+- `File::read_str()` — Read file contents as UTF-8 string
+- `File::metadata()` — Get file metadata (size, modified time)
+
+### DirSet (Overlays)
+
+You can compose multiple directories using `DirSet` to support overlays and override semantics. Later directories in the set override files from earlier ones with the same relative path.
+
+```rust
+use fs_embed::{fs_embed, DirSet};
+
+static BASE: fs_embed::Dir = fs_embed!("base");
+static THEME: fs_embed::Dir = fs_embed!("theme");
+
+let set = DirSet::new(vec![BASE, THEME]);
+if let Some(file) = set.get_file("index.html") {
+    // File from THEME if it exists, otherwise BASE
+}
+```
+
+- Overlay precedence is left-to-right
+- Only the highest-precedence file for each path is returned by `walk_override()`
 
 ---
 
-## ⚠️ Notes
+## Tests
 
-* `DirSet::walk()` traversal order is **not guaranteed** (OS-dependent).
-* `Dir::entries()` preserves insertion order of embedded files and folders, but disk-backed order may vary.
-* All embedded files are resolved at compile time. Dynamic mode reads directly from disk at runtime.
+This crate includes comprehensive tests for all public API. To run tests:
 
----
-
-## 📦 Installation
-
-```toml
-[dependencies]
-fs-embed = "0.1"
+```sh
+cargo test -p fs-embed
 ```
 
 ---
 
-## 📖 Docs
+## License
 
-Full API documentation: [docs.rs/fs-embed](https://docs.rs/fs-embed)
+This crate is dual-licensed under either the MIT or Apache-2.0 license, at your option.
+See [LICENSE-MIT](../LICENSE-MIT) and [LICENSE-APACHE](../LICENSE-APACHE) for details.
+
+---
+
 
 ---
 
-## ❤️ Inspired by
 
-* [`include_dir`](https://docs.rs/include_dir)
-* [`rust-embed`](https://docs.rs/rust-embed)
+## Related Crate: [`rust-silos`](https://crates.io/crates/rust-silos)
 
-`fs-embed` unifies compile-time embedding with runtime overrides in a zero-config, ergonomic interface — ideal for CLI tools, embedded apps, web frameworks, and static-site generators.
+If you only need to embed files and access them by path (without directory traversal, overlays, or virtual filesystem features), consider using [`rust-silos`](https://crates.io/crates/rust-silos). It provides a minimal, highly efficient, and allocation-free API for file embedding, ideal for simple use cases where directory APIs are not required.
 
 ---
+
+## Links
+
+- [Documentation (docs.rs)](https://docs.rs/fs-embed)
+- [Crate (crates.io)](https://crates.io/crates/fs-embed)
+- [Repository (GitHub)](https://github.com/vivsh/fs-embed)

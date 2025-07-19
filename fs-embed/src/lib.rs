@@ -55,7 +55,6 @@ impl InnerFile {
     }
 }
 
-
 #[derive(Debug, Clone)]
 enum InnerDir {
     Embed(include_dir::Dir<'static>, &'static str),
@@ -80,11 +79,12 @@ impl std::hash::Hash for InnerDir {
 }
 
 impl InnerDir {
-
     fn into_dynamic(self) -> Self {
         match &self {
-            InnerDir::Embed(dir, path) => 
-                Self::Path { root: PathBuf::from(path), path: PathBuf::from(path).join(dir.path()) },
+            InnerDir::Embed(dir, path) => Self::Path {
+                root: PathBuf::from(path),
+                path: PathBuf::from(path).join(dir.path()),
+            },
             InnerDir::Path { .. } => self,
         }
     }
@@ -171,7 +171,7 @@ impl Dir {
             inner: InnerDir::Path {
                 root: base_path.join(path),
                 path: base_path.join(path),
-            }
+            },
         }
     }
 
@@ -215,8 +215,6 @@ impl Dir {
     }
 
     /// Returns all immediate entries (files and subdirectories) in this directory.
-    /// This is a low-level API; prefer using higher-level methods for most use cases.
-    #[doc(hidden)]
     pub fn entries(&self) -> Vec<DirEntry> {
         match &self.inner {
             InnerDir::Embed(dir, root) => dir
@@ -259,16 +257,36 @@ impl Dir {
     /// The name is relative to the directory root.
     pub fn get_file(&self, name: &str) -> Option<File> {
         match &self.inner {
-            InnerDir::Embed(dir, _) => {
-                dir.get_file(dir.path().join(name)).map(|file| File {
-                    inner: InnerFile::Embed(file.clone()),
-                })
-            },
+            InnerDir::Embed(dir, _) => dir.get_file(dir.path().join(name)).map(|file| File {
+                inner: InnerFile::Embed(file.clone()),
+            }),
             InnerDir::Path { root, path } => {
                 let new_path = path.join(name);
                 if new_path.is_file() {
                     Some(File {
                         inner: InnerFile::Path {
+                            root: root.clone(),
+                            path: new_path,
+                        },
+                    })
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    /// Returns a reference to the directory with the given name, if it exists.
+    pub fn get_dir(&self, name: &str) -> Option<Dir> {
+        match &self.inner {
+            InnerDir::Embed(dir, root) => dir.get_dir(dir.path().join(name)).map(|subdir| Dir {
+                inner: InnerDir::Embed(subdir.clone(), root),
+            }),
+            InnerDir::Path { root, path } => {
+                let new_path = path.join(name);
+                if new_path.is_dir() {
+                    Some(Dir {
+                        inner: InnerDir::Path {
                             root: root.clone(),
                             path: new_path,
                         },
@@ -480,22 +498,31 @@ impl DirSet {
         None
     }
 
+    pub fn get_dir(&self, name: &str) -> Option<Dir> {
+        for dir in self.dirs.iter().rev() {
+            if let Some(subdir) = dir.get_dir(name) {
+                return Some(subdir);
+            }
+        }
+        None
+    }
+
     /// Recursively walks all files in all root directories.
     /// Files with the same relative path from different roots are all included.
     pub fn walk(&self) -> impl Iterator<Item = File> {
-        let mut queue: VecDeque<DirEntry> = VecDeque::with_capacity(self.dirs.len() * 128); // Assuming an average of 128 entries per directory
+        let mut queue: Vec<DirEntry> = Vec::with_capacity(self.dirs.len() * 128); // Assuming an average of 128 entries per directory
         for dir in self.dirs.iter() {
-            queue.push_back(DirEntry::from_dir(dir.clone()));
+            queue.push(DirEntry::from_dir(dir.clone()));
         }
         std::iter::from_fn(move || {
-            while let Some(entry) = queue.pop_front() {
+            while let Some(entry) = queue.pop() {
                 match entry.inner {
                     InnerEntry::File(file) => return Some(File { inner: file }),
                     InnerEntry::Dir(dir) => {
-                        for child in( Dir { inner: dir }).entries().into_iter().rev() {
-                            queue.push_front(child);
+                        for child in (Dir { inner: dir }).entries().into_iter().rev() {
+                            queue.push(child);
                         }
-                    },
+                    }
                 }
             }
             None
@@ -506,23 +533,25 @@ impl DirSet {
     /// This implements the override behaviour: later roots take precedence over earlier ones.
     pub fn walk_override(&self) -> impl Iterator<Item = File> {
         let mut history = std::collections::HashSet::new();
-        let mut queue: VecDeque<DirEntry> = VecDeque::with_capacity(self.dirs.len() * 128); // Assuming an average of 128 entries per directory
+        let mut stack: Vec<DirEntry> = Vec::with_capacity(self.dirs.len() * 128); // DFS uses stack
         for dir in self.dirs.iter() {
-            queue.push_front(DirEntry::from_dir(dir.clone()));
+            stack.push(DirEntry::from_dir(dir.clone()));
         }
         std::iter::from_fn(move || {
-            while let Some(entry) = queue.pop_front() {
+            while let Some(entry) = stack.pop() {
                 match entry.inner {
-                    InnerEntry::File(file) => {                        
-                        if  history.insert(file.path().to_owned()) {                           
-                            return Some(File { inner: file })
+                    InnerEntry::File(file) => {
+                        if history.insert(file.path().to_owned()) {
+                            return Some(File { inner: file });
                         }
-                    },
+                    }
                     InnerEntry::Dir(dir) => {
-                        for child in( Dir { inner: dir }).entries().into_iter() {
-                            queue.push_front(child);
+                        // Push children in reverse order to preserve order in DFS
+                        let children = Dir { inner: dir }.entries();
+                        for child in children.into_iter() {
+                            stack.push(child);
                         }
-                    },
+                    }
                 }
             }
             None
