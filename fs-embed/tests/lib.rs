@@ -350,7 +350,7 @@ fn test_file_read_bytes() {
 fn test_file_read_str_invalid_utf8() {
     use std::io::Write;
     use std::fs;
-    use std::path::Path;
+    // unused std::path::Path import removed
     // Create a unique temp directory for this test
     let temp_dir = tempfile::Builder::new()
         .prefix("fs_embed_test_bad_utf8_")

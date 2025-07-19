@@ -7,9 +7,9 @@ use syn::{Lit, LitStr, parse::Parse, parse_macro_input};
 
 /// Embed a directory at compile time, returning a `Dir` enum. The path should be a literal string
 /// and strictly relative to the crate root.
-/// embed_dir!("dir")                 → Dir::from_embedded
+/// fs_embed!("dir")                 → Dir::from_embedded
 #[proc_macro]
-pub fn embed_dir(input: TokenStream) -> TokenStream {
+pub fn fs_embed(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as EmbedArgs);
 
     let rel_lit: LitStr = match args.path {

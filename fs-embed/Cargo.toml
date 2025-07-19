@@ -21,7 +21,7 @@ default = ["std"]
 std = []
 
 [dependencies]
-fs-embed-macros = { version.workspace = true }
+fs-embed-macros = { workspace = true }
 include_dir = {version = "0.7.4", features=[ "metadata" ]}
 phf = "0.11"
 walkdir = "2.4"

@@ -4,7 +4,7 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input, LitStr, Token,
