@@ -1,8 +1,9 @@
 
+
 [package]
 name = "rust-silos-macros"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 description = "Proc-macro for rust-silos: embed directories as static maps at compile time."
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/vivsh/fs-embed"

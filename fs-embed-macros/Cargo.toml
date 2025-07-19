@@ -1,4 +1,5 @@
 
+
 [package]
 name = "fs-embed-macros"
 version.workspace = true
