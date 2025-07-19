@@ -6,8 +6,8 @@ version.workspace = true
 edition.workspace = true
 license = "MIT OR Apache-2.0"
 repository.workspace = true
-description.workspace = true
-readme = "../README.md"
+description = "Embed files in release, read from disk in debug — with a unified API."
+readme = "README.md"
 homepage = "https://github.com/vivsh/fs-embed"
 documentation = "https://docs.rs/fs-embed"
 categories = ["filesystem", "embedded"]
@@ -20,7 +20,7 @@ default = ["std"]
 std = []
 
 [dependencies]
-fs-embed-macros = "0.1"
+fs-embed-macros = "^0.1"
 include_dir = {version = "0.7.4", features=[ "metadata" ]}
 phf = "0.11"
 walkdir = "2.4"
