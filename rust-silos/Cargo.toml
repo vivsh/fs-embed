@@ -16,7 +16,7 @@ readme = "README.md"
 thiserror = "1.0"
 phf = { version = "0.11", features = ["macros"] }
 walkdir = "2.4"
-rust-silos-macros = { version = "^0.1", path = "../rust-silos-macros" }
+rust-silos-macros = { version.workspace = true, path = "../rust-silos-macros" }
 
 
 [dev-dependencies]
