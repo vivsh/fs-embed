@@ -109,7 +109,7 @@ pub fn embed_silo(input: TokenStream) -> TokenStream {
         expanded.into()
     } else {
         let expanded = quote! {
-            #crate_root::Silo::from_path(#dir_path)
+            #crate_root::Silo::from_static(#dir_path)
         };
         expanded.into()
     }

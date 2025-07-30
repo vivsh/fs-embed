@@ -34,7 +34,7 @@ fn test_embed_silo_iter() {
 /// Tests that a dynamic silo can retrieve a known file by path.
 #[test]
 fn test_dyn_silo_get_file() {
-    let silo = Silo::from_path("tests/data");
+    let silo = Silo::from_static("tests/data");
     let file = silo.get_file("beta.txt").unwrap();
     assert_eq!(file.path().to_str().unwrap(), "beta.txt");
 }
@@ -42,14 +42,14 @@ fn test_dyn_silo_get_file() {
 /// Tests that a dynamic silo returns None for a missing file.
 #[test]
 fn test_dyn_silo_get_file_not_found() {
-    let silo = Silo::from_path("tests/data");
+    let silo = Silo::from_static("tests/data");
     assert!(silo.get_file("notfound.txt").is_none());
 }
 
 /// Tests that iterating a dynamic silo yields all expected files.
 #[test]
 fn test_dyn_silo_iter() {
-    let silo = Silo::from_path("tests/data");
+    let silo = Silo::from_static("tests/data");
     let files: HashSet<_> = silo.iter().map(|f| f.path().to_str().unwrap().to_owned()).collect();
     assert!(files.contains("alpha.txt"));
     assert!(files.contains("beta.txt"));
@@ -75,7 +75,7 @@ fn test_file_is_embedded() {
 /// Tests that is_embedded returns false for dynamic files.
 #[test]
 fn test_file_is_dynamic() {
-    let silo = Silo::from_path("tests/data");
+    let silo = Silo::from_static("tests/data");
     let file = silo.get_file("alpha.txt").unwrap();
     assert!(!file.is_embedded());
 }
@@ -83,7 +83,7 @@ fn test_file_is_dynamic() {
 /// Tests that absolute_path returns Some for dynamic files.
 #[test]
 fn test_file_absolute_path_dyn() {
-    let silo = Silo::from_path("tests/data");
+    let silo = Silo::from_static("tests/data");
     let file = silo.get_file("alpha.txt").unwrap();
     assert!(file.absolute_path().is_some());
 }
@@ -117,7 +117,7 @@ fn test_silo_auto_dynamic() {
 #[test]
 fn test_silo_set_get_file() {
     let s1 = embed_silo!("tests/data");
-    let s2 = Silo::from_path("tests/data");
+    let s2 = Silo::from_static("tests/data");
     let set = SiloSet::new(vec![s1, s2]);
     assert!(set.get_file("alpha.txt").is_some());
 }
@@ -126,7 +126,7 @@ fn test_silo_set_get_file() {
 #[test]
 fn test_silo_set_iter() {
     let s1 = embed_silo!("tests/data");
-    let s2 = Silo::from_path("tests/data");
+    let s2 = Silo::from_static("tests/data");
     let set = SiloSet::new(vec![s1, s2]);
     let files: Vec<_> = set.iter().collect();
     assert!(!files.is_empty());
@@ -136,7 +136,7 @@ fn test_silo_set_iter() {
 #[test]
 fn test_silo_set_iter_override() {
     let s1 = embed_silo!("tests/data");
-    let s2 = Silo::from_path("tests/data");
+    let s2 = Silo::from_static("tests/data");
     let set = SiloSet::new(vec![s1, s2]);
     let files: Vec<_> = set.iter_override().collect();
     assert!(!files.is_empty());
@@ -146,7 +146,7 @@ fn test_silo_set_iter_override() {
 #[test]
 fn test_embed_vs_dyn_parity() {
     let embed = embed_silo!("tests/data");
-    let dyns = Silo::from_path("tests/data");
+    let dyns = Silo::from_static("tests/data");
     let embed_files: HashSet<_> = embed.iter().map(|f| f.path().to_str().unwrap().to_owned()).collect();
     let dyn_files: HashSet<_> = dyns.iter().map(|f| f.path().to_str().unwrap().to_owned()).collect();
     assert_eq!(embed_files, dyn_files);
@@ -172,7 +172,7 @@ fn test_embed_file_metadata() {
 /// Tests that dynamic file metadata is correct.
 #[test]
 fn test_dyn_file_metadata() {
-    let silo = Silo::from_path("tests/data");
+    let silo = Silo::from_static("tests/data");
     let file = silo.get_file("alpha.txt").unwrap();
     assert!(file.path().to_str().unwrap().ends_with("alpha.txt"));
 }
@@ -190,7 +190,7 @@ fn test_embed_file_read_bytes() {
 /// Tests reading bytes from a dynamic file.
 #[test]
 fn test_dyn_file_read_bytes() {
-    let silo = Silo::from_path("tests/data");
+    let silo = Silo::from_static("tests/data");
     let file = silo.get_file("alpha.txt").unwrap();
     let mut buf = Vec::new();
     file.reader().unwrap().read_to_end(&mut buf).unwrap();
@@ -210,7 +210,7 @@ fn test_embed_file_read_str() {
 /// Tests reading a string from a dynamic file.
 #[test]
 fn test_dyn_file_read_str() {
-    let silo = Silo::from_path("tests/data");
+    let silo = Silo::from_static("tests/data");
     let file = silo.get_file("alpha.txt").unwrap();
     let mut buf = String::new();
     file.reader().unwrap().read_to_string(&mut buf).unwrap();
@@ -230,7 +230,7 @@ fn test_embed_file_subdir() {
 /// Tests reading a file from a subdirectory (dynamic).
 #[test]
 fn test_dyn_file_subdir() {
-    let silo = Silo::from_path("tests/data");
+    let silo = Silo::from_static("tests/data");
     let file = silo.get_file("subdir/gamma.txt").unwrap();
     let mut buf = String::new();
     file.reader().unwrap().read_to_string(&mut buf).unwrap();

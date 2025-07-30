@@ -1,4 +1,3 @@
-
 # rust-silos
 
 [![crates.io](https://img.shields.io/crates/v/rust-silos.svg)](https://crates.io/crates/rust-silos)
@@ -107,6 +106,65 @@ Overlay precedence is left-to-right. Only the highest-precedence file for each p
 
 ---
 
+## Silo Construction Methods
+
+There are three primary methods for constructing a `Silo`:
+
+1. **Embedded Mode**: Files are embedded directly into the binary at compile time using `include_bytes!`. This ensures maximum reliability and portability, as the files are always available regardless of the runtime environment.
+
+   ```rust
+   static ASSETS: Silo = rust_silos::embed_silo!("assets", force = true);
+   ```
+
+2. **Static Mode**: Files are embedded in release builds but read from disk in debug builds. This is the default behavior for development–production parity.
+
+   ```rust
+   static ASSETS: Silo = rust_silos::embed_silo!("assets");
+   ```
+
+3. **Dynamic Mode**: Files are always read from disk at runtime, even in release builds. This is useful for tests, hot-reload, or CLI tools.
+
+   ```rust
+   let dir = ASSETS.into_dynamic();
+   ```
+
+---
+
+## Silo and SiloSet API
+
+### Silo
+
+The `Silo` struct provides a simple API for accessing embedded files:
+
+- `get_file(path: &str) -> Option<File>`: Retrieve a file by its relative path.
+- `iter() -> impl Iterator<Item = File>`: Iterate over all embedded files.
+- `auto_dynamic() -> Silo`: Use disk in debug mode, embedded in release mode.
+- `into_dynamic() -> Silo`: Always use disk mode.
+
+### SiloSet
+
+The `SiloSet` struct allows composing multiple `Silo` instances to support overlays and override semantics:
+
+- `new(silos: Vec<Silo>) -> SiloSet`: Create a new `SiloSet` from a list of `Silo` instances.
+- `get_file(path: &str) -> Option<File>`: Retrieve the highest-precedence file for a given path.
+- `iter() -> impl Iterator<Item = File>`: Iterate over all files in the `SiloSet`.
+- `iter_override() -> impl Iterator<Item = File>`: Iterate over files with override precedence.
+
+Example:
+
+```rust
+use rust_silos::{Silo, SiloSet};
+
+static BASE: Silo = rust_silos::embed_silo!("base");
+static THEME: Silo = rust_silos::embed_silo!("theme");
+
+let set = SiloSet::new(vec![BASE, THEME]);
+if let Some(file) = set.get_file("index.html") {
+    // File from THEME if it exists, otherwise BASE
+}
+```
+
+---
 
 ## When to Use rust-silos
 

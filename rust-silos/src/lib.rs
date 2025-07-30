@@ -52,7 +52,7 @@ impl EmbedFile {
 #[derive(Debug, Clone)]
 enum FileKind {
     Embed(EmbedFile),
-    Dyn(DynFile),
+    Dynamic(DynFile),
 }
 
 /// Represents a file, which may be embedded or dynamic.
@@ -66,7 +66,7 @@ impl File {
     pub fn reader(&self) -> Result<FileReader, Error> {
         match &self.inner {
             FileKind::Embed(embed) => Ok(FileReader::Embed(Cursor::new(embed.inner.contents))),
-            FileKind::Dyn(dyn_file) => Ok(FileReader::Dyn(std::fs::File::open(
+            FileKind::Dynamic(dyn_file) => Ok(FileReader::Dynamic(std::fs::File::open(
                 dyn_file.absolute_path(),
             )?)),
         }
@@ -76,7 +76,7 @@ impl File {
     pub fn path(&self) -> &Path {
         match &self.inner {
             FileKind::Embed(embed) => embed.path(),
-            FileKind::Dyn(dyn_file) => dyn_file.path(),
+            FileKind::Dynamic(dyn_file) => dyn_file.path(),
         }
     }
 
@@ -89,7 +89,7 @@ impl File {
     pub fn absolute_path(&self) -> Option<&Path> {
         match &self.inner {
             FileKind::Embed(_) => None,
-            FileKind::Dyn(dyn_file) => Some(dyn_file.absolute_path()),
+            FileKind::Dynamic(dyn_file) => Some(dyn_file.absolute_path()),
         }
     }
 
@@ -173,48 +173,86 @@ impl DynFile {
     }
 }
 
+/// Get a dynamic file by its relative path. Returns None if not found or not a file.
+fn get_file_for_root(root: &str, path: &str) -> Option<DynFile> {
+    let pathbuff = Path::new(&*root).join(path);
+    if pathbuff.is_file() {            
+        Some(DynFile::new(Arc::from(pathbuff.to_str()?), Arc::from(path)))
+    } else {
+        None
+    }
+}
+
+/// Iterate over all files in the dynamic silo.
+fn iter_root(root: &str) -> impl Iterator<Item = File> {
+    let root_path = PathBuf::from(&*root);
+    walkdir::WalkDir::new(&root_path)
+        .into_iter()
+        .filter_map(move |entry| {
+            let entry = entry.ok()?;
+            if entry.file_type().is_file() {
+                let relative_path = entry.path().strip_prefix(&root_path).ok()?;
+                Some(File {
+                    inner: FileKind::Dynamic(DynFile::new(
+                        Arc::from(entry.path().to_str()?),
+                        Arc::from(relative_path.to_str()?),
+                    )),
+                })
+            } else {
+                None
+            }
+        })
+}
+
 /// Represents a set of dynamic (filesystem) files rooted at a directory.
 #[derive(Debug, Clone)]
-struct DynSilo {
+struct DynamicSilo {
+    root: Arc<str>,
+}
+
+impl DynamicSilo {
+    /// Creates a new DynamicSilo from a dynamic root path.
+    /// The root path must be valid UTF-8.
+    pub fn new(root: &str) -> Self {
+        Self { root: Arc::from(root) }
+    }
+
+    /// Gets a dynamic file by its relative path.
+    /// Returns `None` if the file is not found or is not a valid file.
+    pub fn get_file(&self, path: &str) -> Option<DynFile> {
+        get_file_for_root(self.root.as_ref(), path)
+    }
+
+    /// Iterates over all files in the dynamic silo.
+    /// Returns an iterator of `File` objects representing the files.
+    pub fn iter(&self) -> impl Iterator<Item = File> {
+        iter_root(self.root.as_ref())
+    }
+}
+
+/// Represents a set of static (filesystem) files rooted at a directory.
+/// Static silos are backed by a fixed directory path.
+#[derive(Debug, Clone)]
+struct StaticSilo {
     root: &'static str,
 }
 
-
-impl DynSilo {
-    /// Create a new DynSilo from a static root path.
+impl StaticSilo {
+    /// Creates a new StaticSilo from a static root path.
     pub const fn new(root: &'static str) -> Self {
         Self { root }
     }
 
-    /// Get a dynamic file by its relative path. Returns None if not found or not a file.
+    /// Gets a static file by its relative path.
+    /// Returns `None` if the file is not found or is not a valid file.
     pub fn get_file(&self, path: &str) -> Option<DynFile> {
-        let pathbuff = Path::new(&*self.root).join(path);
-        if pathbuff.is_file() {            
-            Some(DynFile::new(Arc::from(pathbuff.to_str()?), Arc::from(path)))
-        } else {
-            None
-        }
+        get_file_for_root(self.root, path)
     }
 
-    /// Iterate over all files in the dynamic silo.
+    /// Iterates over all files in the static silo.
+    /// Returns an iterator of `File` objects representing the files.
     pub fn iter(&self) -> impl Iterator<Item = File> {
-        let root_path = PathBuf::from(&*self.root);
-        walkdir::WalkDir::new(&root_path)
-            .into_iter()
-            .filter_map(move |entry| {
-                let entry = entry.ok()?;
-                if entry.file_type().is_file() {
-                    let relative_path = entry.path().strip_prefix(&root_path).ok()?;
-                    Some(File {
-                        inner: FileKind::Dyn(DynFile::new(
-                            Arc::from(entry.path().to_str()?),
-                            Arc::from(relative_path.to_str()?),
-                        )),
-                    })
-                } else {
-                    None
-                }
-            })
+        iter_root(self.root)
     }
 }
 
@@ -222,7 +260,8 @@ impl DynSilo {
 #[derive(Debug, Clone)]
 enum InnerSilo {
     Embed(EmbedSilo),
-    Dyn(DynSilo),
+    Static(StaticSilo),
+    Dynamic(DynamicSilo),
 }
 
 /// Represents a root directory, which may be embedded or dynamic.
@@ -232,70 +271,82 @@ pub struct Silo {
 }
 
 impl Silo {
-
-    /// Create a Silo from an EmbedSilo.
+    /// Creates a Silo from an embedded PHF map and root path.
     pub const fn from_embedded(phf_map: &'static phf::Map<&'static str, EmbedEntry>, root: &'static str) -> Self {
         Self {
             inner: InnerSilo::Embed(EmbedSilo::new(phf_map, root)),
         }
     }
 
-    /// Create a Silo from a static path (dynamic root).
-    pub const fn from_path(path: &'static str) -> Self {
+    /// Creates a Silo from a static path (dynamic root).
+    pub const fn from_static(path: &'static str) -> Self {
         Self {
-            inner: InnerSilo::Dyn(DynSilo::new(path)),
+            inner: InnerSilo::Static(StaticSilo::new(path)),
         }
     }
 
-    /// Convert to a dynamic Silo if currently embedded, otherwise returns self.
+    /// Creates a Silo from a dynamic path (dynamic root).
+    pub fn from_str(path: &str) -> Self {
+        Self {
+            inner: InnerSilo::Dynamic(DynamicSilo::new(path)),
+        }
+    }
+
+    /// Converts the Silo to a dynamic Silo if it is currently embedded.
+    /// Returns `self` unchanged if the Silo is already dynamic or static.
     pub fn into_dynamic(self) -> Self {
         match self.inner {
-            InnerSilo::Embed(emb_silo) => Self::from_path(&*emb_silo.root),
-            InnerSilo::Dyn(_) => self,
+            InnerSilo::Embed(emb_silo) => Self::from_static(&*emb_silo.root),
+            InnerSilo::Static(_) => self,
+            InnerSilo::Dynamic(_) => self,
         }
     }
 
-    /// Automatically converts to a dynamic directory if in debug mode (cfg!(debug_assertions)).
-    /// In release mode, returns self unchanged.
-    /// Convert to a dynamic Silo in debug mode, otherwise returns self.
+    /// Automatically converts the Silo to a dynamic directory in debug mode (`cfg!(debug_assertions)`).
+    /// In release mode, returns `self` unchanged.
     pub fn auto_dynamic(self) -> Self {
         if cfg!(debug_assertions) {
-            return self.into_dynamic();
+            self.into_dynamic()
         } else {
-            return self;
+            self
         }
     }
 
-    /// Returns true if this Silo is dynamic (filesystem-backed).
+    /// Returns `true` if this Silo is dynamic (filesystem-backed).
     pub fn is_dynamic(&self) -> bool {
-        matches!(self.inner, InnerSilo::Dyn(_))
+        matches!(self.inner, InnerSilo::Static(_) | InnerSilo::Dynamic(_))
     }
 
-    /// Returns true if this Silo is embedded in the binary.
+    /// Returns `true` if this Silo is embedded in the binary.
     pub fn is_embedded(&self) -> bool {
         matches!(self.inner, InnerSilo::Embed(_))
     }
 
-    /// Get a file by relative path from this Silo. Returns None if not found.
+    /// Gets a file by its relative path from this Silo.
+    /// Returns `None` if the file is not found.
     pub fn get_file(&self, path: &str) -> Option<File> {
         match &self.inner {
             InnerSilo::Embed(embed) => embed.get_file(path).map(|f| File {
                 inner: FileKind::Embed(f),
             }),
-            InnerSilo::Dyn(dyn_silo) => dyn_silo.get_file(path).map(|f| File {
-                inner: FileKind::Dyn(f),
+            InnerSilo::Static(dyn_silo) => dyn_silo.get_file(path).map(|f| File {
+                inner: FileKind::Dynamic(f),
+            }),
+            InnerSilo::Dynamic(dyn_silo) => dyn_silo.get_file(path).map(|f| File {
+                inner: FileKind::Dynamic(f),
             }),
         }
     }
 
-    /// Iterate over all files in this Silo.
+    /// Iterates over all files in this Silo.
+    /// Returns a boxed iterator of `File` objects representing the files.
     pub fn iter(&self) -> Box<dyn Iterator<Item = File> + '_> {
         match &self.inner {
             InnerSilo::Embed(embd) => Box::new(embd.iter()),
-            InnerSilo::Dyn(dynm) => Box::new(dynm.iter()),
+            InnerSilo::Static(dynm) => Box::new(dynm.iter()),
+            InnerSilo::Dynamic(dynm) => Box::new(dynm.iter()),
         }
     }
-    
 }
 
 
@@ -349,7 +400,7 @@ impl SiloSet {
 /// Reader for file contents, either embedded or dynamic.
 pub enum FileReader {
     Embed(std::io::Cursor<&'static [u8]>),
-    Dyn(std::fs::File),
+    Dynamic(std::fs::File),
 }
 
 /// Implements std::io::Read for FileReader.
@@ -357,7 +408,7 @@ impl std::io::Read for FileReader {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         match self {
             FileReader::Embed(c) => c.read(buf),
-            FileReader::Dyn(f) => f.read(buf),
+            FileReader::Dynamic(f) => f.read(buf),
         }
     }
 }
