@@ -175,15 +175,6 @@ If you need overlays, dynamic/disk mode, or a virtual filesystem abstraction, se
 ---
 
 
-## Comparison with Other Embedding Crates
-
-| Crate        | Embedding method   | Overlays | Dynamic mode | Virtual FS | Notes                                  |
-|--------------|-------------------|----------|--------------|------------|----------------------------------------|
-| rust-silos   | `include_bytes!`  | ✅       | ✅           | ❌         | Fast, minimal, overlays, disk/dev mode |
-| fs-embed     | `include_dir`     | ✅       | ✅           | ✅         | Unified API, overlays, dynamic support |
-
----
-
 ## Tests
 
 This crate includes comprehensive tests for all public API. To run tests:
