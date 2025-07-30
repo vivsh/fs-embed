@@ -1,9 +1,7 @@
 [workspace]
 members = [
     "fs-embed",
-    "fs-embed-macros",
-    "rust-silos",
-    "rust-silos-macros"
+    "fs-embed-macros"
 ]
 resolver = "3"
 
