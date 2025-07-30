@@ -106,38 +106,20 @@ Overlay precedence is left-to-right. Only the highest-precedence file for each p
 
 ---
 
-## Silo Construction Methods
-
-There are two primary methods for constructing a `Silo`:
-
-1. **Macro-Based Construction**: Use the `embed_silo!` macro to embed files directly into the binary at compile time or read them from disk at runtime, depending on the mode.
-
-   ```rust
-   static ASSETS: Silo = rust_silos::embed_silo!("assets");
-   ```
-
-2. **Runtime Construction**: Use the `Silo::from_str` method to create a `Silo` dynamically at runtime from a directory path or other string input.
-
-   ```rust
-   use rust_silos::Silo;
-
-   let assets = Silo::from_str("assets").unwrap();
-   ```
-
----
-
 ## Silo and SiloSet API
 
 ### Silo
 
 The `Silo` struct provides a simple API for accessing embedded files:
 
+- `new(path: &str) -> Self`: Creates a new dynamic `Silo` from the given path.
 - `get_file(path: &str) -> Option<File>`: Retrieve a file by its relative path.
 - `iter() -> Box<dyn Iterator<Item = File>>`: Iterate over all files in the silo.
 - `is_embedded() -> bool`: Returns `true` if the silo is embedded in the binary.
 - `is_dynamic() -> bool`: Returns `true` if the silo is dynamic (filesystem-backed).
 - `auto_dynamic(self) -> Self`: Converts the silo to dynamic mode in debug builds; no-op in release builds. *Should be used only on an embedded silo; for other modes it is a no-op.*
 - `into_dynamic(self) -> Self`: Converts the silo to dynamic mode if it is embedded; no-op otherwise.
+
 
 ### SiloSet
 
