@@ -304,6 +304,7 @@ impl Silo {
 
     /// Automatically converts the Silo to a dynamic directory in debug mode (`cfg!(debug_assertions)`).
     /// In release mode, returns `self` unchanged.
+    /// This is a no-op if the Silo is not embedded.
     pub fn auto_dynamic(self) -> Self {
         if cfg!(debug_assertions) {
             self.into_dynamic()

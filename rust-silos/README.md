@@ -67,7 +67,7 @@ If you re-export or rename the `rust-silos` crate in your project, set `crate = 
 After creating a `Silo` with the macro, you can control whether it uses embedded files or reads from disk at runtime:
 
 - `into_dynamic()`: Always use disk (dynamic) mode, even in release builds. Useful for tests, hot-reload, or CLI tools.
-- `auto_dynamic()`: Use disk in debug mode, embedded in release mode. This is the default for development–production parity.
+- `auto_dynamic()`: Use disk in debug mode, embedded in release mode. This is the default for development–production parity. *Should be used only on an embedded silo; for other modes it is a no-op.*
 
 Example:
 
@@ -134,7 +134,9 @@ The `Silo` struct provides a simple API for accessing embedded files:
 
 - `get_file(path: &str) -> Option<File>`: Retrieve a file by its relative path.
 - `iter() -> impl Iterator<Item = File>`: Iterate over all embedded files.
-- `auto_dynamic() -> Silo`: Use disk in debug mode, embedded in release mode.
+- `is_embedded() -> bool`: Returns `true` if the silo is embedded in the binary.
+- `is_dynamic() -> bool`: Returns `true` if the silo is dynamic (filesystem-backed).
+- `auto_dynamic() -> Silo`: Use disk in debug mode, embedded in release mode. *Should be used only on an embedded silo; for other modes it is a no-op.*
 - `into_dynamic() -> Silo`: Always use disk mode.
 
 ### SiloSet
