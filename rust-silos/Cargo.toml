@@ -2,7 +2,7 @@
 
 [package]
 name = "rust-silos"
-version.workspace = "0.2.3"
+version = "0.2.3"
 edition.workspace = true
 license = "MIT OR Apache-2.0"
 description = "Minimal, robust file embedding for Rust. Efficient, allocation-free, and reliable."
