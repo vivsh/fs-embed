@@ -271,6 +271,8 @@ pub struct Silo {
 }
 
 impl Silo {
+
+    #[doc(hidden)]
     /// Creates a Silo from an embedded PHF map and root path.
     pub const fn from_embedded(phf_map: &'static phf::Map<&'static str, EmbedEntry>, root: &'static str) -> Self {
         Self {
@@ -278,6 +280,7 @@ impl Silo {
         }
     }
 
+    #[doc(hidden)]
     /// Creates a Silo from a static path (dynamic root).
     pub const fn from_static(path: &'static str) -> Self {
         Self {
@@ -286,7 +289,7 @@ impl Silo {
     }
 
     /// Creates a Silo from a dynamic path (dynamic root).
-    pub fn from_str(path: &str) -> Self {
+    pub fn new(path: &str) -> Self {
         Self {
             inner: InnerSilo::Dynamic(DynamicSilo::new(path)),
         }
