@@ -108,24 +108,20 @@ Overlay precedence is left-to-right. Only the highest-precedence file for each p
 
 ## Silo Construction Methods
 
-There are three primary methods for constructing a `Silo`:
+There are two primary methods for constructing a `Silo`:
 
-1. **Embedded Mode**: Files are embedded directly into the binary at compile time using `include_bytes!`. This ensures maximum reliability and portability, as the files are always available regardless of the runtime environment.
-
-   ```rust
-   static ASSETS: Silo = rust_silos::embed_silo!("assets", force = true);
-   ```
-
-2. **Static Mode**: Files are embedded in release builds but read from disk in debug builds. This is the default behavior for development–production parity.
+1. **Macro-Based Construction**: Use the `embed_silo!` macro to embed files directly into the binary at compile time or read them from disk at runtime, depending on the mode.
 
    ```rust
    static ASSETS: Silo = rust_silos::embed_silo!("assets");
    ```
 
-3. **Dynamic Mode**: Files are always read from disk at runtime, even in release builds. This is useful for tests, hot-reload, or CLI tools.
+2. **Runtime Construction**: Use the `Silo::from_str` method to create a `Silo` dynamically at runtime from a directory path or other string input.
 
    ```rust
-   let dir = ASSETS.into_dynamic();
+   use rust_silos::Silo;
+
+   let assets = Silo::from_str("assets").unwrap();
    ```
 
 ---
