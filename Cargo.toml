@@ -21,5 +21,5 @@ proc-macro2 = "1.0"
 quote = "1.0"
 syn = "2.0"
 fs-embed-macros = { path = "fs-embed-macros", version = "0.2.2" }
-rust-silos-macros = { path = "rust-silos-macros", version = "0.2.2" }
+rust-silos-macros = { path = "rust-silos-macros", version = "0.2.3" }
 
